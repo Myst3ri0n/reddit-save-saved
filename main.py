@@ -14,8 +14,15 @@ reddit = praw.Reddit(client_id=cfg.client_id,
 
 saved_posts = reddit.user.me().saved(limit=None)
 
-for l in saved_posts:
-	url = l.url
+#filter out only images and gifs
+links =[]
+for link in saved_posts:
+	if link.url[-3:].upper() in ['JPG','PNG','GIF']:
+		links.append(link.url)
+
+
+for l in links:
+	url = l
 	print('Downloading: '+url)
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	urllib.request.urlretrieve(url,'saved/'+file_name)
