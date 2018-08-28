@@ -15,12 +15,17 @@ reddit = praw.Reddit(client_id=cfg.client_id,
 saved_posts = reddit.user.me().saved(limit=None)
 
 #filter out only images and gifs
-links = []
-title = []
+links  = []
+titles = []
 for link in saved_posts:
-	if link.url[-3:].upper() in ['JPG','PNG','GIF']:
-		title.append(link.title)
-		links.append(link.url)
+	url   = link.url
+	title = link.title
+	if url[-3:].upper() in ['JPG','PNG','GIF']:
+		titles.append(title)
+		links.append(url)
+	is_album = re.search(r'imgur\.com\/a\/',url)
+	if is_album:
+		print(url+' is an album...\n')
 
 print(f'{len(links)} images will be downloaded...\n')
 
@@ -28,9 +33,12 @@ print(f'{len(links)} images will be downloaded...\n')
 index = 0
 for l in links:
 	url = l
-	print(f'Downloading: {title[index]}  ({url})')
+	print(f'Downloading: {titles[index]}  ({url})')
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
-	urllib.request.urlretrieve(url,'saved/'+file_name)
+	try:
+		urllib.request.urlretrieve(url,'saved/'+file_name)
+	except:
+		print(f'Unable to download: ^^^{url}^^^')
 	time.sleep(2)
 	index+=1
 
