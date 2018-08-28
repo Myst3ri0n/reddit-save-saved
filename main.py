@@ -15,8 +15,9 @@ reddit = praw.Reddit(client_id=cfg.client_id,
 saved_posts = reddit.user.me().saved(limit=None)
 
 #filter out only images and gifs
-links  = []
-titles = []
+links       = []
+titles      = []
+album_count = 1
 for link in saved_posts:
 	url   = link.url
 	title = link.title
@@ -26,6 +27,9 @@ for link in saved_posts:
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
 		print(url+' is an album...\n')
+		album_count+=1
+
+print(f'{album_count} albums detected...\n')
 
 print(f'{len(links)} images will be downloaded...\n')
 
