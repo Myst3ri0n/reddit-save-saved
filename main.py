@@ -3,6 +3,9 @@ import config as cfg
 import re
 import time
 import urllib.request
+from requests_html import HTMLSession
+
+session = HTMLSession()
 
 print('Downloading all saved Reddit Images...\n')
 
@@ -27,6 +30,20 @@ for link in saved_posts:
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
 		print(url+' is an album...\n')
+		r = session.get(url)
+		r.html.render()
+		album_html   = r.html.html
+		album_images = re.findall(r'.*?{"hash":"([a-zA-Z0-9]+)".*?"ext":"(\.[a-zA-Z0-9]+)".*?',album_html)
+		album_index  = 1
+		for i in list(set(album_images)):
+			img_id    = i[0]
+			ext       = i[1]
+			file_name = img_id+ext
+			album_url = f'https://imgur.com/{img_id}{ext}'
+			links.append(album_url)
+			titles.append(title+'_ALB_'+str(album_index))
+			album_index+=1
+
 		album_count+=1
 
 print(f'{album_count} albums detected...\n')
