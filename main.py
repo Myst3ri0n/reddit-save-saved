@@ -3,7 +3,20 @@ import config as cfg
 import re
 import time
 import urllib.request
+import os
+import gcore as g
 from requests_html import HTMLSession
+
+db_name='saved'
+
+new_db = False
+if os.path.isfile(db_name+'.db') == False:
+	new_db = True
+
+d = g.db.DatabaseManager(db_name, False)
+
+if new_db:
+	d.query(d.readSql('install.sql'))
 
 session = HTMLSession()
 
@@ -53,8 +66,14 @@ print(f'{len(links)} images will be downloaded...\n')
 #download files
 index = 0
 for l in links:
+	db_links = d.query("SELECT URL FROM DOWNLOAD_LOG;")
+	if l in db_links:
+		print(f'{titles[index]} already has been downloaded...')
+		index+=1
+		continue
 	url = l
 	print(f'Downloading: {titles[index]}  ({url})')
+	d.query(f"INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE) VALUES('{cfg.username}','{url}','{titles[index]}');")
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	try:
 		urllib.request.urlretrieve(url,'saved/'+file_name)

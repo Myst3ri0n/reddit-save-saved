@@ -4,3 +4,6 @@ config.py
 *.jpg
 *.png
 *.gif
+*.db
+*.pyc
+test.py
