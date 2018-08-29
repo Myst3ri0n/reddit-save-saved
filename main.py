@@ -39,22 +39,18 @@ reddit = praw.Reddit(client_id=cfg.client_id,
 
 saved_posts = reddit.user.me().saved(limit=None)
 
-links          = []
-titles         = []
-subreddit      = []
-reddit_link    = []
-album_count    = 1
+post_info      = {}
+album_count    = 0
+url_count      = 1
 for link in saved_posts:
-	url    = link.url
-	title  = link.title
-	subr   = link.subreddit_name_prefixed[2:]
-	r_link = link.permalink
+	url      = link.url
+	title    = link.title
+	subr     = link.subreddit_name_prefixed[2:]
+	perm_url = 'https://reddit.com'+link.permalink
 	#filter out only images and gifs
 	if url[-3:].upper() in ['JPG','PNG','GIF']:
-		titles.append(title)
-		links.append(url)
-		subreddit.append(subr)
-		reddit_link.append('https://reddit.com'+r_link)
+		post_info[url_count] = {'Title':title,'Url':url,'Subreddit':subr,'Permalink':perm_url,'Is_Album':''}
+		url_count+=1
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
 		print(url+' is an album...\n')
@@ -67,41 +63,40 @@ for link in saved_posts:
 			img_id    = i[0]
 			ext       = i[1]
 			file_name = img_id+ext
-			album_url = f'https://imgur.com/{img_id}{ext}'
-			links.append(album_url)
-			titles.append(title+'_ALB_'+str(album_index))
-			subreddit.append(subr)
-			reddit_link.append('https://reddit.com'+r_link)
+			post_info[url_count] = {'Title':title+'_ALB_'+str(album_index),'Url':f'https://imgur.com/{img_id}{ext}','Subreddit':subr,'Permalink':perm_url,'Is_Album':'Y'}
+			url_count+=1
 			album_index+=1
-
 		album_count+=1
+
+post_keys = list(post_info.keys())
 
 print(f'{album_count} albums detected...\n')
 
-print(f'{len(links)} images will be downloaded...\n')
+print(f'{len(post_keys)} images will be downloaded...\n')
 
 #download files
-index = 0
-for l in links:
+for k in post_keys:
+	title = post_info[k]['Title']
+	url   = post_info[k]['Url']
+	perm  = post_info[k]['Permalink']
+	subr  = post_info[k]['Subreddit']
+	alb   = post_info[k]['Is_Album']
 	db_links = d.query("SELECT URL FROM DOWNLOAD_LOG;")
-	if l in db_links and force==False:
-		print(f'{titles[index]} already has been downloaded...')
-		index+=1
+	if url in db_links and force==False:
+		print(f'{title} already has been downloaded...')
 		continue
-	url = l
-	print(f'Downloading: {titles[index]}  ({url})')
-	if not os.path.exists('saved/'+str(subreddit[index])) and folders:
-		os.makedirs('saved/'+str(subreddit[index]))
-	d.query(f"""
-				INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE,SUB_REDDIT,PERMALINK) 
-				VALUES('{cfg.username}','{url}','{titles[index]}','{subreddit[index]}','{reddit_link[index]}');
-				""")
+	print(f'Downloading: {title}  ({url})')
+	if not os.path.exists('saved/'+str(subr)) and folders:
+		os.makedirs('saved/'+str(subr))
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	try:
-		urllib.request.urlretrieve(url,'saved/'+subreddit[index]+'/'+file_name if folders else 'saved/'+file_name)
+		urllib.request.urlretrieve(url,'saved/'+subr+'/'+file_name if folders else 'saved/'+file_name)
+		d.query(f"""
+			INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE,SUB_REDDIT,PERMALINK,IS_ALBUM) 
+			VALUES('{cfg.username}','{url}','{title}','{subr}','{perm}',{d.nullValue(alb)});
+			""")
 	except:
 		print(f'Unable to download: ^^^{url}^^^')
 	time.sleep(2)
-	index+=1
 
 print('\nProcess Complete!')
