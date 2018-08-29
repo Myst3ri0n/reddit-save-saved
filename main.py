@@ -4,7 +4,7 @@ import re
 import time
 import urllib.request
 import os
-import gcore as g
+from gcore import db, timesys as t
 import argparse
 from requests_html import HTMLSession
 
@@ -22,7 +22,7 @@ new_db = False
 if os.path.isfile(db_name+'.db') == False:
 	new_db = True
 
-d = g.db.DatabaseManager(db_name, False)
+d = db.DatabaseManager(db_name, False)
 
 if new_db:
 	d.query(d.readSql('install.sql'))
@@ -91,10 +91,18 @@ for k in post_keys:
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	try:
 		urllib.request.urlretrieve(url,'saved/'+subr+'/'+file_name if folders else 'saved/'+file_name)
-		d.query(f"""
-			INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE,SUB_REDDIT,PERMALINK,IS_ALBUM) 
-			VALUES('{cfg.username}','{url}','{title}','{subr}','{perm}',{d.nullValue(alb)});
-			""")
+		if url in db_links and force==True:
+			d.query(f"""
+				UPDATE 	DOWNLOAD_LOG
+				SET 	DATE_DOWNLOADED = '{t.nowDateTime()}'
+				WHERE 	URL='{url}';
+					""")
+
+		else:
+			d.query(f"""
+				INSERT INTO DOWNLOAD_LOG(USER,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,PERMALINK,IS_ALBUM) 
+				VALUES('{cfg.username}','{t.nowDateTime()}','{url}','{title}','{subr}','{perm}',{d.nullValue(alb)});
+				""")
 	except:
 		print(f'Unable to download: ^^^{url}^^^')
 	time.sleep(2)
