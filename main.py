@@ -33,13 +33,16 @@ saved_posts = reddit.user.me().saved(limit=None)
 #filter out only images and gifs
 links       = []
 titles      = []
+subreddit   = []
 album_count = 1
 for link in saved_posts:
 	url   = link.url
 	title = link.title
+	subr  = link.subreddit
 	if url[-3:].upper() in ['JPG','PNG','GIF']:
 		titles.append(title)
 		links.append(url)
+		subreddit.append(subr)
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
 		print(url+' is an album...\n')
@@ -55,6 +58,7 @@ for link in saved_posts:
 			album_url = f'https://imgur.com/{img_id}{ext}'
 			links.append(album_url)
 			titles.append(title+'_ALB_'+str(album_index))
+			subreddit.append(subr)
 			album_index+=1
 
 		album_count+=1
@@ -73,7 +77,7 @@ for l in links:
 		continue
 	url = l
 	print(f'Downloading: {titles[index]}  ({url})')
-	d.query(f"INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE) VALUES('{cfg.username}','{url}','{titles[index]}');")
+	d.query(f"INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE,SUB_REDDIT) VALUES('{cfg.username}','{url}','{titles[index]}','{subreddit[index]}');")
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	try:
 		urllib.request.urlretrieve(url,'saved/'+file_name)
