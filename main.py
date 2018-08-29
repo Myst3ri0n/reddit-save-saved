@@ -39,19 +39,22 @@ reddit = praw.Reddit(client_id=cfg.client_id,
 
 saved_posts = reddit.user.me().saved(limit=None)
 
-#filter out only images and gifs
-links       = []
-titles      = []
-subreddit   = []
-album_count = 1
+links          = []
+titles         = []
+subreddit      = []
+reddit_link    = []
+album_count    = 1
 for link in saved_posts:
-	url   = link.url
-	title = link.title
-	subr  = link.subreddit_name_prefixed[2:]
+	url    = link.url
+	title  = link.title
+	subr   = link.subreddit_name_prefixed[2:]
+	r_link = link.permalink
+	#filter out only images and gifs
 	if url[-3:].upper() in ['JPG','PNG','GIF']:
 		titles.append(title)
 		links.append(url)
 		subreddit.append(subr)
+		reddit_link.append('https://reddit.com'+r_link)
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
 		print(url+' is an album...\n')
@@ -68,6 +71,7 @@ for link in saved_posts:
 			links.append(album_url)
 			titles.append(title+'_ALB_'+str(album_index))
 			subreddit.append(subr)
+			reddit_link.append('https://reddit.com'+r_link)
 			album_index+=1
 
 		album_count+=1
@@ -88,7 +92,10 @@ for l in links:
 	print(f'Downloading: {titles[index]}  ({url})')
 	if not os.path.exists('saved/'+str(subreddit[index])) and folders:
 		os.makedirs('saved/'+str(subreddit[index]))
-	d.query(f"INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE,SUB_REDDIT) VALUES('{cfg.username}','{url}','{titles[index]}','{subreddit[index]}');")
+	d.query(f"""
+				INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE,SUB_REDDIT,PERMALINK) 
+				VALUES('{cfg.username}','{url}','{titles[index]}','{subreddit[index]}','{reddit_link[index]}');
+				""")
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	try:
 		urllib.request.urlretrieve(url,'saved/'+subreddit[index]+'/'+file_name if folders else 'saved/'+file_name)
