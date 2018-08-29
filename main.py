@@ -5,7 +5,16 @@ import time
 import urllib.request
 import os
 import gcore as g
+import argparse
 from requests_html import HTMLSession
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--force',action='store_true')
+parser.add_argument('--folders',action='store_true')
+parser = parser.parse_args()
+
+force    = parser.force
+folders  = parser.folders
 
 db_name='saved'
 
@@ -38,7 +47,7 @@ album_count = 1
 for link in saved_posts:
 	url   = link.url
 	title = link.title
-	subr  = link.subreddit
+	subr  = link.subreddit_name_prefixed[2:]
 	if url[-3:].upper() in ['JPG','PNG','GIF']:
 		titles.append(title)
 		links.append(url)
@@ -71,16 +80,18 @@ print(f'{len(links)} images will be downloaded...\n')
 index = 0
 for l in links:
 	db_links = d.query("SELECT URL FROM DOWNLOAD_LOG;")
-	if l in db_links:
+	if l in db_links and force==False:
 		print(f'{titles[index]} already has been downloaded...')
 		index+=1
 		continue
 	url = l
 	print(f'Downloading: {titles[index]}  ({url})')
+	if not os.path.exists('saved/'+str(subreddit[index])) and folders:
+		os.makedirs('saved/'+str(subreddit[index]))
 	d.query(f"INSERT INTO DOWNLOAD_LOG(USER,URL,TITLE,SUB_REDDIT) VALUES('{cfg.username}','{url}','{titles[index]}','{subreddit[index]}');")
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	try:
-		urllib.request.urlretrieve(url,'saved/'+file_name)
+		urllib.request.urlretrieve(url,'saved/'+subreddit[index]+'/'+file_name if folders else 'saved/'+file_name)
 	except:
 		print(f'Unable to download: ^^^{url}^^^')
 	time.sleep(2)
