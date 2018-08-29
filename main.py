@@ -8,6 +8,8 @@ from gcore import db, timesys as t
 import argparse
 from requests_html import HTMLSession
 
+start_time = time.time() 
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--force',action='store_true')
 parser.add_argument('--folders',action='store_true')
@@ -29,7 +31,7 @@ if new_db:
 
 session = HTMLSession()
 
-print('Downloading all saved Reddit Images...\n')
+print('Downloading saved Reddit Images...\n')
 
 reddit = praw.Reddit(client_id=cfg.client_id,
 					client_secret=cfg.client_secret,
@@ -53,7 +55,7 @@ for link in saved_posts:
 		url_count+=1
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
-		print(url+' is an album...\n')
+		print(f'{url} is an album...\n')
 		r = session.get(url)
 		r.html.render()
 		album_html   = r.html.html
@@ -106,4 +108,8 @@ for k in post_keys:
 		print(f'Unable to download: ^^^{url}^^^')
 	time.sleep(2)
 
-print('\nProcess Complete!')
+time_took = round(time.time() - start_time,3)
+
+print(f'\nProcess completed in {t.humanTime(time_took)}...')
+
+print('\nProcess Complete!\n')
