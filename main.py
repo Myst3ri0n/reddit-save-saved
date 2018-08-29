@@ -97,7 +97,6 @@ for k in post_keys:
 				SET 	DATE_DOWNLOADED = '{t.nowDateTime()}'
 				WHERE 	URL='{url}';
 					""")
-
 		else:
 			d.query(f"""
 				INSERT INTO DOWNLOAD_LOG(USER,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,PERMALINK,IS_ALBUM) 
