@@ -41,9 +41,10 @@ reddit = praw.Reddit(client_id=cfg.client_id,
 
 saved_posts = reddit.user.me().saved(limit=None)
 
-post_info      = {}
-album_count    = 0
-url_count      = 1
+post_info       = {}
+album_count     = 0
+url_count       = 1
+album_img_count = 1
 for link in saved_posts:
 	url      = link.url
 	title    = link.title
@@ -56,8 +57,8 @@ for link in saved_posts:
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
 		print(f'{url} is an album...\n')
-		r = session.get(url)
-		r.html.render()
+		r = session.get(url+'/layout/blog')
+		#r.html.render()
 		album_html   = r.html.html
 		album_images = re.findall(r'.*?{"hash":"([a-zA-Z0-9]+)".*?"ext":"(\.[a-zA-Z0-9]+)".*?',album_html)
 		album_index  = 1
@@ -68,13 +69,14 @@ for link in saved_posts:
 			post_info[url_count] = {'Title':title+'_ALB_'+str(album_index),'Url':f'https://imgur.com/{img_id}{ext}','Subreddit':subr,'Permalink':perm_url,'Is_Album':'Y'}
 			url_count+=1
 			album_index+=1
+			album_img_count+=1
 		album_count+=1
 
 post_keys = list(post_info.keys())
 
-print(f'{album_count} albums detected...\n')
+print(f'{album_count} albums detected with {album_img_count} images...\n')
 
-print(f'{len(post_keys)} images will be downloaded...\n')
+print(f'{len(post_keys)} total images will be downloaded...\n')
 
 #download files
 for k in post_keys:
