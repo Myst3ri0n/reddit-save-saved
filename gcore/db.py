@@ -40,11 +40,13 @@ class DatabaseManager(object):
         self.query(iQuery)
         return iQuery
 
-    def nullValue(self,string):
+    def nullValue(self,string,is_int=False):
         if string=='':
             return 'NULL'
-        elif string !='':
-            return '\''+string+'\''
+        elif string !='' and is_int==False:
+            return '\''+str(string)+'\''
+        elif string !='' and is_int==True:
+            return string
 
     def __del__(self):
         self.conn.close()
