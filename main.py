@@ -53,7 +53,8 @@ for link in saved_posts:
 	perm_url = 'https://reddit.com'+link.permalink
 	#filter out only images and gifs
 	if url[-3:].upper() in ['JPG','PNG','GIF']:
-		post_info[url_count] = {'User':user,'Title':title,'Url':url,'Album_Url':'','Subreddit':subr,'Permalink':perm_url,'Is_Album':'','Alb_Index':''}
+		file_name = re.findall(r'(?=\w+\.\w{3,4}$).+',link.url)[0]
+		post_info[url_count] = {'User':user,'Title':title,'Url':url,'File_Name':file_name,'Album_Url':'','Subreddit':subr,'Permalink':perm_url,'Is_Album':'','Alb_Index':''}
 		url_count+=1
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
@@ -66,7 +67,7 @@ for link in saved_posts:
 			img_id    = i[0]
 			ext       = i[1]
 			file_name = img_id+ext
-			post_info[url_count] = {'User':user,'Title':title+'_ALB_'+str(album_index),'Url':f'https://imgur.com/{img_id}{ext}','Album_Url':url,'Subreddit':subr,'Permalink':perm_url,'Is_Album':'Y','Alb_Index':album_index}
+			post_info[url_count] = {'User':user,'Title':title+'_ALB_'+str(album_index),'Url':f'https://imgur.com/{img_id}{ext}','File_Name':img_id+ext,'Album_Url':url,'Subreddit':subr,'Permalink':perm_url,'Is_Album':'Y','Alb_Index':album_index}
 			url_count+=1
 			album_index+=1
 			album_img_count+=1
@@ -82,14 +83,15 @@ time.sleep(5)
 
 #download files
 for k in post_keys:
-	user     = post_info[k]['User']
-	title    = post_info[k]['Title']
-	url      = post_info[k]['Url']
-	alb_url  = post_info[k]['Album_Url']
-	perm     = post_info[k]['Permalink']
-	subr     = post_info[k]['Subreddit']
-	alb      = post_info[k]['Is_Album']
-	alb_i    = post_info[k]['Alb_Index']
+	user      = post_info[k]['User']
+	title     = post_info[k]['Title']
+	url       = post_info[k]['Url']
+	alb_url   = post_info[k]['Album_Url']
+	perm      = post_info[k]['Permalink']
+	subr      = post_info[k]['Subreddit']
+	alb       = post_info[k]['Is_Album']
+	alb_i     = post_info[k]['Alb_Index']
+	file_name = post_info[k]['File_Name']
 	db_links = d.query("SELECT URL FROM DOWNLOAD_LOG;")
 	if url in db_links and force==False:
 		print(f'{title} already has been downloaded...')
@@ -108,8 +110,8 @@ for k in post_keys:
 					""")
 		else:
 			d.query(f"""
-				INSERT INTO DOWNLOAD_LOG(SAVED_USER,POSTED_BY,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,PERMALINK,IS_ALBUM,ALBUM_INDEX,ALBUM_URL) 
-				VALUES('{cfg.username}','{user}','{t.nowDateTime()}','{url}','{title}','{subr}','{perm}',{d.nullValue(alb)},{d.nullValue(alb_i,is_int=True)},{d.nullValue(alb_url)});
+				INSERT INTO DOWNLOAD_LOG(SAVED_USER,POSTED_BY,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,PERMALINK,IS_ALBUM,ALBUM_INDEX,ALBUM_URL,'FILE_NAME') 
+				VALUES('{cfg.username}','{user}','{t.nowDateTime()}','{url}','{title}','{subr}','{perm}',{d.nullValue(alb)},{d.nullValue(alb_i,is_int=True)},{d.nullValue(alb_url)},'{file_name}');
 				""")
 		time.sleep(2)
 	except:

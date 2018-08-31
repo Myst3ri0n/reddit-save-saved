@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Offline Reddit</title>
+	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" type="text/css">
+</head>
+<body>
+
+<section id="photos">
+	{% for i in images %}
+		
+		<img src="{{i[0]}}" alt="{{i[1]}}">
+	{% endfor %}
+</section>
+
+</body>
+</html>
