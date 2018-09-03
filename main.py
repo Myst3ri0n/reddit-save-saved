@@ -97,11 +97,11 @@ for k in post_keys:
 		print(f'{title} already has been downloaded...')
 		continue
 	print(f'Downloading: {title[:80]}  ({url})')
-	if not os.path.exists('saved/'+str(subr)) and folders:
-		os.makedirs('saved/'+str(subr))
+	if not os.path.exists('static/saved/'+str(subr)) and folders:
+		os.makedirs('static/saved/'+str(subr))
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	try:
-		urllib.request.urlretrieve(url,'saved/'+subr+'/'+file_name if folders else 'saved/'+file_name)
+		urllib.request.urlretrieve(url,'static/saved/'+subr+'/'+file_name if folders else 'static/saved/'+file_name)
 		if url in db_links and force==True:
 			d.query(f"""
 				UPDATE 	DOWNLOAD_LOG

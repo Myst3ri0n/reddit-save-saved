@@ -15,7 +15,53 @@ def index():
 	cur = conn.cursor()
 	cur.execute('SELECT ID AS COUNT FROM DOWNLOAD_LOG')
 	image_ids = cur.fetchall()
-	img_ids = random.sample(range(len(list(image_ids))), 25)
+	if len(image_ids)<25:
+		random_num = len(image_ids)
+	else:
+		random_num = 25
+	img_ids = random.sample(range(len(list(image_ids))), random_num)
+	cur.execute(f"""
+			SELECT 	'static/saved/'||SUB_REDDIT||'/'||FILE_NAME AS FILE_NAME,
+					TITLE AS TITLE,
+					ID AS ID
+			FROM 	DOWNLOAD_LOG
+			WHERE 	ID IN ({', '.join(str(x) for x in img_ids)});
+		""")
+	fp_imgs = cur.fetchall()
+	return render_template('index.html',images=fp_imgs)
+
+@app.route('/search',methods=['GET', 'POST'])
+def search():
+	if request.method == 'POST':
+		conn = sqlite3.connect('saved.db')
+		conn.text_factory = str
+		cur = conn.cursor()
+		search_term = request.form['search']
+		print(search_term)
+		cur.execute(f"""
+				SELECT 	'static/saved/'||SUB_REDDIT||'/'||FILE_NAME AS FILE_NAME,
+						TITLE AS TITLE,
+						ID AS ID
+				FROM 	DOWNLOAD_LOG
+				WHERE 	TITLE LIKE '%{search_term}%';
+			""")
+		search_images = cur.fetchall()
+		return render_template('index.html',images=search_images)
+	return render_template('index.html')
+
+
+@app.route('/filter/gifs',methods=['GET','POST'])
+def gifsOnly():
+	conn = sqlite3.connect('saved.db')
+	conn.text_factory = str
+	cur = conn.cursor()
+	cur.execute("SELECT ID AS COUNT FROM DOWNLOAD_LOG WHERE lower(FILE_NAME) LIKE '%gif%';")
+	image_ids = cur.fetchall()
+	if len(image_ids)<25:
+		random_num = len(image_ids)
+	else:
+		random_num = 25
+	img_ids = random.sample(range(len(list(image_ids))), random_num)
 	cur.execute(f"""
 			SELECT 	'static/saved/'||SUB_REDDIT||'/'||FILE_NAME AS FILE_NAME,
 					TITLE AS TITLE,
@@ -25,7 +71,35 @@ def index():
 		""")
 	fp_imgs = cur.fetchall()
 	
-	return render_template('index.html',images=fp_imgs)
+	return render_template('subreddit.html',images=fp_imgs)
+
+
+@app.route('/filter/images',methods=['GET','POST'])
+def imagesOnly():
+	conn = sqlite3.connect('saved.db')
+	conn.text_factory = str
+	cur = conn.cursor()
+	cur.execute("""
+				SELECT 	ID AS COUNT 
+				FROM 	DOWNLOAD_LOG 
+				WHERE 	lower(FILE_NAME) LIKE '%jpg%' 
+						OR lower(FILE_NAME) LIKE '%png%';""")
+	image_ids = cur.fetchall()
+	if len(image_ids)<25:
+		random_num = len(image_ids)
+	else:
+		random_num = 25
+	img_ids = random.sample(range(len(list(image_ids))), random_num)
+	cur.execute(f"""
+			SELECT 	'static/saved/'||SUB_REDDIT||'/'||FILE_NAME AS FILE_NAME,
+					TITLE AS TITLE,
+					ID AS ID
+			FROM 	DOWNLOAD_LOG
+			WHERE 	ID IN ({', '.join(str(x) for x in img_ids)});
+		""")
+	fp_imgs = cur.fetchall()
+	
+	return render_template('subreddit.html',images=fp_imgs)
 
 @app.route('/r/<subreddit>',methods=['GET','POST'])
 def subredditPage(subreddit):
@@ -35,7 +109,8 @@ def subredditPage(subreddit):
 	print(subreddit)
 	cur.execute(f"""
 			SELECT 	'static/saved/'||SUB_REDDIT||'/'||FILE_NAME AS FILE_NAME,
-					TITLE AS TITLE
+					TITLE AS TITLE,
+					ID AS ID
 			FROM 	DOWNLOAD_LOG
 			WHERE 	SUB_REDDIT='{subreddit}';
 		""")
@@ -43,7 +118,12 @@ def subredditPage(subreddit):
 	
 	return render_template('subreddit.html',images=imgs)
 
+@app.route('/about')
+def about():
+	
+	return render_template('about.html')
 
+#json endpoints
 @app.route('/json/subreddits')
 def jsonSubs():
 	conn = sqlite3.connect('saved.db')

@@ -1,0 +1,23 @@
+{% extends 'header.html' %}
+
+{% block css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/about.css') }}" type="text/css">
+{% endblock %}
+
+{% block content %}
+
+<div class="container">
+
+<h2>Developed by: Alex Gilliard</h2>
+<h4><a href="mailto:agilliard@gmail.com">agilliard@gmail.com</a></h4>
+<hr>
+<p>
+	Just had an idea to build a simple reddit image downloader in Python but realized I needed a way to
+	view the images. So this is what I ended up with, it's not perfect but it meets my needs. If you have
+	any feature requests feel free to shoot me an email. I hope you enjoy it!
+</p>
+
+</div>
+
+
+{% endblock %}

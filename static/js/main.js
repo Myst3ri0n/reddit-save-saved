@@ -57,7 +57,6 @@ $(function() {
 
 	$('#close').click(function() {
 		$('#imagemodal').hide();
-
 		});
 		
 	});
