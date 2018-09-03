@@ -1,0 +1,12 @@
+{% extends 'header.html' %}
+
+{% block content %}
+
+<section id="photos">
+	{% for i in images %}
+		
+		<img src="http://127.0.0.1:5005/{{i[0]}}" alt="{{i[1]}}">
+	{% endfor %}
+</section>
+
+{% endblock %}

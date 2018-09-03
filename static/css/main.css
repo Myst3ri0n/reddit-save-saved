@@ -45,3 +45,23 @@
   column-count:         1;
   }
 }
+
+
+.modal-content{
+    background-color: #333940 !important;
+    color:#979897;
+}
+
+.modal-footer a{
+  color: white !important;
+}
+
+#img_body{
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.modal {
+  overflow-y: scroll;
+}

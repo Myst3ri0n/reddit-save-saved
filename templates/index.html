@@ -1,17 +1,45 @@
-<!DOCTYPE html>
-<html>
-<head>
-	<title>Offline Reddit</title>
-	<link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" type="text/css">
-</head>
-<body>
+{% extends 'header.html' %}
+
+{% block content %}
 
 <section id="photos">
 	{% for i in images %}
-		
-		<img src="{{i[0]}}" alt="{{i[1]}}">
+		<a href="#" id="titled_img" onclick="loadModalContent('{{i[2]}}');">
+			<img src="{{i[0]}}" alt="{{i[1]}} ">
+		</a>
 	{% endfor %}
 </section>
 
-</body>
-</html>
+
+<div class="modal" id="imagemodal" tabindex="-1" role="dialog">
+  <div class="modal-dialog modal-lg" role="document">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 id="modal_title" class="modal-title"></h5>
+        <button id="close" type="button" class="close" data-dismiss="modal" aria-label="Close">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body" id="img_body">
+
+      </div>
+      <div class="modal-footer">
+      	<div class="container">
+		  <div class="row">
+		    <div class="col-sm" id="posted_by">
+		      
+		    </div>
+		    <div class="col-sm" id="sub_reddit">
+		      
+		    </div>
+		    <div class="col-sm" id="download_link">
+		      
+		    </div>
+		  </div>
+		</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %}
