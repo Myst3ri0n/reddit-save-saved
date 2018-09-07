@@ -2,13 +2,14 @@ import praw
 import config as cfg
 import re
 import time
-import urllib.request
 import os
 import datetime
 import argparse
+import shutil
+from urllib.request import Request, urlopen
+from termcolor import colored, cprint
 from gcore import db, timesys as t
 from requests_html import HTMLSession
-from PIL import Image
 
 start_time = time.time() 
 
@@ -97,6 +98,7 @@ print(f'{len(post_keys)} total images will be downloaded...\n')
 time.sleep(5)
 
 download_count = 0
+current_count  = 1
 
 #download files
 for k in post_keys:
@@ -114,14 +116,18 @@ for k in post_keys:
 	db_links  = d.query("SELECT URL FROM DOWNLOAD_LOG;")
 	if url in db_links and force==False:
 		print(f'{title} already has been downloaded...')
+		current_count += 1
 		continue
-	print(f'Downloading: {title[:80]}  ({url})')
+	print(f'Downloading: {title[:80]}  ({url}) :: {str(current_count)} out of {str(len(post_keys))}')
+	current_count += 1
 	if not os.path.exists('static/saved/'+str(subr)) and folders:
 		os.makedirs('static/saved/'+str(subr))
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
 	save_location = f'static/saved/{subr}/{file_name}' if folders else f'static/saved/{file_name}'
 	try:
-		urllib.request.urlretrieve(url,save_location)
+		req = Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+		with urlopen(req) as response, open(save_location, 'wb') as out_file:
+			shutil.copyfileobj(response, out_file)
 		if url in db_links and force==True:
 			d.query(f"""
 				UPDATE 	DOWNLOAD_LOG
@@ -130,12 +136,9 @@ for k in post_keys:
 					""")
 		else:
 			#determining if image is missing form imgur
-			im = Image.open(save_location)
-			img_format  = im.format
-			img_width   = im.size[0]
-			img_height  = im.size[1]
-			if img_format=='JPEG' and img_width=='161' and img_height=='81':
+			if urlopen(url).geturl()=='https://i.imgur.com/removed.png':
 				error_msg = 'Imgur Missing Image.'
+				cprint(f'Unable to download: ^^^{url}^^^ The error was: Imgur Missing Image.','red', 'on_cyan',attrs=['bold'])
 				os.remove(save_location)
 				d.query(f"""
 					INSERT INTO DOWNLOAD_LOG(SAVED_USER,POSTED_BY,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,
@@ -156,7 +159,7 @@ for k in post_keys:
 					""")
 		time.sleep(2)
 	except Exception as e:
-		print(f'Unable to download: ^^^{url}^^^ The error was: {str(e)}')
+		cprint(f'Unable to download: ^^^{url}^^^ The error was: {str(e)}','red', 'on_cyan',attrs=['bold'])
 		d.query(f"""
 			INSERT INTO DOWNLOAD_LOG(SAVED_USER,POSTED_BY,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,
 						PERMALINK,IS_ALBUM,ALBUM_INDEX,ALBUM_URL,FILE_NAME,POSTED_DATE
