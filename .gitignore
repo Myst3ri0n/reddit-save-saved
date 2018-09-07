@@ -7,4 +7,3 @@ config.py
 *.db
 *.pyc
 test.py
-static/saved
