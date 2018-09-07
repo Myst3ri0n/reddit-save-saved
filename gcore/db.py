@@ -48,5 +48,9 @@ class DatabaseManager(object):
         elif string !='' and is_int==True:
             return string
 
+    def sqlQuotes(self,string):
+        return string.replace("'","''")
+        
+
     def __del__(self):
         self.conn.close()

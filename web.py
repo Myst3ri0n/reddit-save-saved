@@ -13,7 +13,7 @@ def index():
 	conn = sqlite3.connect('saved.db')
 	conn.text_factory = str
 	cur = conn.cursor()
-	cur.execute('SELECT ID AS COUNT FROM DOWNLOAD_LOG')
+	cur.execute('SELECT ID AS COUNT FROM DOWNLOAD_LOG WHERE DOWNLOAD_FAILED IS NULL;')
 	image_ids = cur.fetchall()
 	if len(image_ids)<25:
 		random_num = len(image_ids)
@@ -25,7 +25,8 @@ def index():
 					TITLE AS TITLE,
 					ID AS ID
 			FROM 	DOWNLOAD_LOG
-			WHERE 	ID IN ({', '.join(str(x) for x in img_ids)});
+			WHERE 	ID IN ({', '.join(str(x) for x in img_ids)})
+					AND DOWNLOAD_FAILED IS NULL;
 		""")
 	fp_imgs = cur.fetchall()
 	return render_template('index.html',images=fp_imgs)
@@ -37,13 +38,13 @@ def search():
 		conn.text_factory = str
 		cur = conn.cursor()
 		search_term = request.form['search']
-		print(search_term)
 		cur.execute(f"""
 				SELECT 	'static/saved/'||SUB_REDDIT||'/'||FILE_NAME AS FILE_NAME,
 						TITLE AS TITLE,
 						ID AS ID
 				FROM 	DOWNLOAD_LOG
-				WHERE 	TITLE LIKE '%{search_term}%';
+				WHERE 	TITLE LIKE '%{search_term}%'
+						AND DOWNLOAD_FAILED IS NULL;
 			""")
 		search_images = cur.fetchall()
 		return render_template('index.html',images=search_images)
@@ -55,7 +56,12 @@ def gifsOnly():
 	conn = sqlite3.connect('saved.db')
 	conn.text_factory = str
 	cur = conn.cursor()
-	cur.execute("SELECT ID AS COUNT FROM DOWNLOAD_LOG WHERE lower(FILE_NAME) LIKE '%gif%';")
+	cur.execute("""
+			SELECT 	ID AS COUNT 
+			FROM 	DOWNLOAD_LOG 
+			WHERE 	lower(FILE_NAME) LIKE '%gif%'
+					AND DOWNLOAD_FAILED IS NULL;
+		""")
 	image_ids = cur.fetchall()
 	if len(image_ids)<25:
 		random_num = len(image_ids)
@@ -67,7 +73,8 @@ def gifsOnly():
 					TITLE AS TITLE,
 					ID AS ID
 			FROM 	DOWNLOAD_LOG
-			WHERE 	ID IN ({', '.join(str(x) for x in img_ids)});
+			WHERE 	ID IN ({', '.join(str(x) for x in img_ids)})
+					AND DOWNLOAD_FAILED IS NULL;
 		""")
 	fp_imgs = cur.fetchall()
 	
@@ -83,7 +90,8 @@ def imagesOnly():
 				SELECT 	ID AS COUNT 
 				FROM 	DOWNLOAD_LOG 
 				WHERE 	lower(FILE_NAME) LIKE '%jpg%' 
-						OR lower(FILE_NAME) LIKE '%png%';""")
+						OR lower(FILE_NAME) LIKE '%png%'
+						AND DOWNLOAD_FAILED IS NULL;""")
 	image_ids = cur.fetchall()
 	if len(image_ids)<25:
 		random_num = len(image_ids)
@@ -95,24 +103,44 @@ def imagesOnly():
 					TITLE AS TITLE,
 					ID AS ID
 			FROM 	DOWNLOAD_LOG
-			WHERE 	ID IN ({', '.join(str(x) for x in img_ids)});
+			WHERE 	ID IN ({', '.join(str(x) for x in img_ids)})
+					AND DOWNLOAD_FAILED IS NULL;
 		""")
 	fp_imgs = cur.fetchall()
 	
 	return render_template('subreddit.html',images=fp_imgs)
+
+@app.route('/filter/recent',methods=['GET','POST'])
+def recent():
+	conn = sqlite3.connect('saved.db')
+	conn.text_factory = str
+	cur = conn.cursor()
+	cur.execute(f"""
+			SELECT 	'static/saved/'||SUB_REDDIT||'/'||FILE_NAME AS FILE_NAME,
+					TITLE AS TITLE,
+					ID AS ID
+			FROM 	DOWNLOAD_LOG
+			WHERE 	DOWNLOAD_FAILED IS NULL
+			ORDER BY
+					POSTED_DATE DESC
+			LIMIT 150;
+		""")
+	imgs = cur.fetchall()
+	
+	return render_template('subreddit.html',images=imgs)
 
 @app.route('/r/<subreddit>',methods=['GET','POST'])
 def subredditPage(subreddit):
 	conn = sqlite3.connect('saved.db')
 	conn.text_factory = str
 	cur = conn.cursor()
-	print(subreddit)
 	cur.execute(f"""
 			SELECT 	'static/saved/'||SUB_REDDIT||'/'||FILE_NAME AS FILE_NAME,
 					TITLE AS TITLE,
 					ID AS ID
 			FROM 	DOWNLOAD_LOG
-			WHERE 	SUB_REDDIT='{subreddit}';
+			WHERE 	SUB_REDDIT='{subreddit}'
+					AND DOWNLOAD_FAILED IS NULL;
 		""")
 	imgs = cur.fetchall()
 	
@@ -129,7 +157,12 @@ def jsonSubs():
 	conn = sqlite3.connect('saved.db')
 	conn.text_factory = str
 	cur = conn.cursor()
-	cur.execute('SELECT DISTINCT SUB_REDDIT FROM DOWNLOAD_LOG ORDER BY SUB_REDDIT;')
+	cur.execute("""
+			SELECT 	DISTINCT SUB_REDDIT 
+			FROM 	DOWNLOAD_LOG 
+			WHERE 	DOWNLOAD_FAILED IS NULL
+			ORDER BY 
+					SUB_REDDIT;""")
 	result=cur.fetchall()
 	return jsonify(response=result)
 

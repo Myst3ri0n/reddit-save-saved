@@ -4,9 +4,11 @@ import re
 import time
 import urllib.request
 import os
-from gcore import db, timesys as t
+import datetime
 import argparse
+from gcore import db, timesys as t
 from requests_html import HTMLSession
+from PIL import Image
 
 start_time = time.time() 
 
@@ -26,8 +28,13 @@ if os.path.isfile(db_name+'.db') == False:
 
 d = db.DatabaseManager(db_name, False)
 
-if new_db:
+db_file_size = os.stat('saved.db').st_size
+
+if new_db or db_file_size==0:
 	d.query(d.readSql('install.sql'))
+
+d.query(f"INSERT INTO JOB_TRACKER(START_DATE) VALUES('{t.nowDateTime()}');")
+job_id = d.query('SELECT ID FROM JOB_TRACKER ORDER BY ID DESC LIMIT 1;',fo=True)
 
 session = HTMLSession()
 
@@ -46,15 +53,20 @@ album_count     = 0
 url_count       = 1
 album_img_count = 0
 for link in saved_posts:
-	user     = link.author
-	url      = link.url
-	title    = link.title
-	subr     = link.subreddit_name_prefixed[2:]
-	perm_url = 'https://reddit.com'+link.permalink
+	user      = link.author
+	url       = link.url
+	title     = link.title
+	subr      = link.subreddit_name_prefixed[2:]
+	perm_url  = 'https://reddit.com'+link.permalink
+	post_time = datetime.datetime.fromtimestamp(link.created)
+	up_votes  = link.ups
 	#filter out only images and gifs
 	if url[-3:].upper() in ['JPG','PNG','GIF']:
 		file_name = re.findall(r'(?=\w+\.\w{3,4}$).+',link.url)[0]
-		post_info[url_count] = {'User':user,'Title':title,'Url':url,'File_Name':file_name,'Album_Url':'','Subreddit':subr,'Permalink':perm_url,'Is_Album':'','Alb_Index':''}
+		post_info[url_count] = {'User':user,'Title':title,'Url':url,'File_Name':file_name,
+								'Album_Url':'','Subreddit':subr,'Permalink':perm_url,
+								'Is_Album':'','Alb_Index':'','Post_Time':post_time,
+								'Up_Votes':up_votes}
 		url_count+=1
 	is_album = re.search(r'imgur\.com\/a\/',url)
 	if is_album:
@@ -67,7 +79,10 @@ for link in saved_posts:
 			img_id    = i[0]
 			ext       = i[1]
 			file_name = img_id+ext
-			post_info[url_count] = {'User':user,'Title':title+'_ALB_'+str(album_index),'Url':f'https://imgur.com/{img_id}{ext}','File_Name':img_id+ext,'Album_Url':url,'Subreddit':subr,'Permalink':perm_url,'Is_Album':'Y','Alb_Index':album_index}
+			post_info[url_count] = {'User':user,'Title':title+'_ALB_'+str(album_index),
+									'Url':f'https://imgur.com/{img_id}{ext}','File_Name':img_id+ext,
+									'Album_Url':url,'Subreddit':subr,'Permalink':perm_url,'Is_Album':'Y',
+									'Alb_Index':album_index,'Post_Time':post_time,'Up_Votes':up_votes}
 			url_count+=1
 			album_index+=1
 			album_img_count+=1
@@ -81,6 +96,8 @@ print(f'{len(post_keys)} total images will be downloaded...\n')
 
 time.sleep(5)
 
+download_count = 0
+
 #download files
 for k in post_keys:
 	user      = post_info[k]['User']
@@ -92,7 +109,9 @@ for k in post_keys:
 	alb       = post_info[k]['Is_Album']
 	alb_i     = post_info[k]['Alb_Index']
 	file_name = post_info[k]['File_Name']
-	db_links = d.query("SELECT URL FROM DOWNLOAD_LOG;")
+	post_time = post_info[k]['Post_Time']
+	up_votes  = post_info[k]['Up_Votes']
+	db_links  = d.query("SELECT URL FROM DOWNLOAD_LOG;")
 	if url in db_links and force==False:
 		print(f'{title} already has been downloaded...')
 		continue
@@ -100,8 +119,9 @@ for k in post_keys:
 	if not os.path.exists('static/saved/'+str(subr)) and folders:
 		os.makedirs('static/saved/'+str(subr))
 	file_name = re.search(r'(?=\w+\.\w{3,4}$).+',url).group(0)
+	save_location = f'static/saved/{subr}/{file_name}' if folders else f'static/saved/{file_name}'
 	try:
-		urllib.request.urlretrieve(url,'static/saved/'+subr+'/'+file_name if folders else 'static/saved/'+file_name)
+		urllib.request.urlretrieve(url,save_location)
 		if url in db_links and force==True:
 			d.query(f"""
 				UPDATE 	DOWNLOAD_LOG
@@ -109,13 +129,47 @@ for k in post_keys:
 				WHERE 	URL='{url}';
 					""")
 		else:
-			d.query(f"""
-				INSERT INTO DOWNLOAD_LOG(SAVED_USER,POSTED_BY,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,PERMALINK,IS_ALBUM,ALBUM_INDEX,ALBUM_URL,'FILE_NAME') 
-				VALUES('{cfg.username}','{user}','{t.nowDateTime()}','{url}','{title}','{subr}','{perm}',{d.nullValue(alb)},{d.nullValue(alb_i,is_int=True)},{d.nullValue(alb_url)},'{file_name}');
-				""")
+			#determining if image is missing form imgur
+			im = Image.open(save_location)
+			img_format  = im.format
+			img_width   = im.size[0]
+			img_height  = im.size[1]
+			if img_format=='JPEG' and img_width=='161' and img_height=='81':
+				error_msg = 'Imgur Missing Image.'
+				os.remove(save_location)
+				d.query(f"""
+					INSERT INTO DOWNLOAD_LOG(SAVED_USER,POSTED_BY,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,
+								PERMALINK,IS_ALBUM,ALBUM_INDEX,ALBUM_URL,FILE_NAME,POSTED_DATE
+								,UP_VOTES,DOWNLOAD_FAILED,ERROR_MSG) 
+					VALUES('{cfg.username}','{user}','{t.nowDateTime()}','{url}','{d.sqlQuotes(title)}',
+							'{subr}','{perm}',{d.nullValue(alb)},{d.nullValue(alb_i,is_int=True)},
+							{d.nullValue(alb_url)},'{file_name}','{post_time}',{up_votes},1,'{error_msg}');
+					""")
+			else:
+				download_count += 1
+				d.query(f"""
+					INSERT INTO DOWNLOAD_LOG(SAVED_USER,POSTED_BY,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,
+								PERMALINK,IS_ALBUM,ALBUM_INDEX,ALBUM_URL,FILE_NAME,POSTED_DATE,UP_VOTES) 
+					VALUES('{cfg.username}','{user}','{t.nowDateTime()}','{url}','{d.sqlQuotes(title)}',
+							'{subr}','{perm}',{d.nullValue(alb)},{d.nullValue(alb_i,is_int=True)},
+							{d.nullValue(alb_url)},'{file_name}','{post_time}',{up_votes});
+					""")
 		time.sleep(2)
-	except:
-		print(f'Unable to download: ^^^{url}^^^')
+	except Exception as e:
+		print(f'Unable to download: ^^^{url}^^^ The error was: {str(e)}')
+		d.query(f"""
+			INSERT INTO DOWNLOAD_LOG(SAVED_USER,POSTED_BY,DATE_DOWNLOADED,URL,TITLE,SUB_REDDIT,
+						PERMALINK,IS_ALBUM,ALBUM_INDEX,ALBUM_URL,FILE_NAME,POSTED_DATE
+						,UP_VOTES,DOWNLOAD_FAILED,ERROR_MSG) 
+			VALUES('{cfg.username}','{user}','{t.nowDateTime()}','{url}','{d.sqlQuotes(title)}',
+					'{subr}','{perm}',{d.nullValue(alb)},{d.nullValue(alb_i,is_int=True)},
+					{d.nullValue(alb_url)},'{file_name}','{post_time}',{up_votes},1,'{str(e)}');
+			""")
+
+d.query(f"""UPDATE 	JOB_TRACKER 
+			SET 	END_DATE = '{t.nowDateTime()}',
+					DOWNLOAD_COUNT = {download_count} 
+			WHERE 	ID = {job_id};""")
 
 time_took = round(time.time() - start_time,3)
 

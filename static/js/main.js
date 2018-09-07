@@ -36,7 +36,7 @@ function loadModalContent(id) {
 
 		$('#modal_title').html('<a href="'+perm+'" target="_blank">'+title+'</a>');
 		$('#posted_by').html('User: <a href="https://reddit.com/u/'+user+'" target="_blank">'+user+'</a>');
-		$('#img_body').html('<img src="http://127.0.0.1:5005/static/saved/'+sub+'/'+file_name+'" alt="'+title+'" width="90%" height="90%">');
+		$('#img_body').html('<img src="http://127.0.0.1:5005/static/saved/'+sub+'/'+file_name+'" alt="'+title+'" style="width: 100%; height: 100%;" ">');
 		$('#sub_reddit').html('Sub: <a href="https://reddit.com/r/'+sub+'" target="_blank">'+sub+'</a>');
 		$('#download_link').html('<a href="http://127.0.0.1:5005/static/saved/'+sub+'/'+file_name+'" download>Download Image</a>');
 
